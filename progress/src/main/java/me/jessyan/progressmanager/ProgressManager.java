@@ -115,6 +115,10 @@ public final class ProgressManager {
     }
 
 
+    public void runUiThread(Runnable runnable) {
+        mHandler.post(runnable);
+    }
+
     /**
      * 设置 {@link ProgressListener#onProgress(ProgressInfo)} 每次被调用的间隔时间
      *
@@ -212,7 +216,7 @@ public final class ProgressManager {
         if (mRequestListeners.containsKey(key)) {
             List<ProgressListener> listeners = mRequestListeners.get(key);
             return request.newBuilder()
-                    .method(request.method(), new ProgressRequestBody(mHandler, request.body(), listeners, mRefreshTime))
+                    .method(request.method(), new ProgressRequestBody(request.body(), listeners, mRefreshTime))
                     .build();
         }
         return request;
@@ -266,7 +270,7 @@ public final class ProgressManager {
         if (mResponseListeners.containsKey(key)) {
             List<ProgressListener> listeners = mResponseListeners.get(key);
             return response.newBuilder()
-                    .body(new ProgressResponseBody(mHandler, response.body(), listeners, mRefreshTime))
+                    .body(new ProgressResponseBody(response.body(), listeners, mRefreshTime))
                     .build();
         }
         return response;

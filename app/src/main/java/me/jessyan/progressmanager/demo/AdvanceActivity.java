@@ -25,7 +25,9 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -328,11 +330,11 @@ public class AdvanceActivity extends AppCompatActivity implements View.OnClickLi
      * 即重复加载同一个 Url 时,停止还在请求当中的进度,再开启新的加载
      */
     private void glideStart() {
-        GlideApp.with(this)
+        Glide.with(this)
                 .load(mNewImageUrl)
-                .centerCrop()
-                .placeholder(R.color.colorPrimary)
-                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .apply(RequestOptions.centerCropTransform()
+                        .placeholder(R.color.colorPrimary)
+                        .diskCacheStrategy(DiskCacheStrategy.NONE))
                 .into(mImageView);
     }
 

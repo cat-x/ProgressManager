@@ -15,7 +15,6 @@
  */
 package me.jessyan.progressmanager.body;
 
-import android.os.Handler;
 import android.os.SystemClock;
 
 import java.io.IOException;
@@ -41,17 +40,15 @@ import okio.Source;
  */
 public class ProgressResponseBody extends ResponseBody {
 
-    protected Handler mHandler;
     protected int mRefreshTime;
     protected final ResponseBody mDelegate;
     protected final ProgressListener[] mListeners;
     protected final ProgressInfo mProgressInfo;
     private BufferedSource mBufferedSource;
 
-    public ProgressResponseBody(Handler handler, ResponseBody responseBody, List<ProgressListener> listeners, int refreshTime) {
+    public ProgressResponseBody(ResponseBody responseBody, List<ProgressListener> listeners, int refreshTime) {
         this.mDelegate = responseBody;
         this.mListeners = listeners.toArray(new ProgressListener[listeners.size()]);
-        this.mHandler = handler;
         this.mRefreshTime = refreshTime;
         this.mProgressInfo = new ProgressInfo(System.currentTimeMillis());
     }
@@ -105,20 +102,13 @@ public class ProgressResponseBody extends ResponseBody {
                         final long finalTempSize = tempSize;
                         final long finalTotalBytesRead = totalBytesRead;
                         final long finalIntervalTime = curTime - lastRefreshTime;
+                        mProgressInfo.setEachBytes(finalBytesRead != -1 ? finalTempSize : -1);
+                        mProgressInfo.setCurrentbytes(finalTotalBytesRead);
+                        mProgressInfo.setIntervalTime(finalIntervalTime);
+                        mProgressInfo.setFinish(finalBytesRead == -1 && finalTotalBytesRead == mProgressInfo.getContentLength());
                         for (int i = 0; i < mListeners.length; i++) {
                             final ProgressListener listener = mListeners[i];
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    // Runnable 里的代码是通过 Handler 执行在主线程的,外面代码可能执行在其他线程
-                                    // 所以我必须使用 final ,保证在 Runnable 执行前使用到的变量,在执行时不会被修改
-                                    mProgressInfo.setEachBytes(finalBytesRead != -1 ? finalTempSize : -1);
-                                    mProgressInfo.setCurrentbytes(finalTotalBytesRead);
-                                    mProgressInfo.setIntervalTime(finalIntervalTime);
-                                    mProgressInfo.setFinish(finalBytesRead == -1 && finalTotalBytesRead == mProgressInfo.getContentLength());
-                                    listener.onProgress(mProgressInfo);
-                                }
-                            });
+                            listener.onProgress(mProgressInfo);
                         }
                         lastRefreshTime = curTime;
                         tempSize = 0;
