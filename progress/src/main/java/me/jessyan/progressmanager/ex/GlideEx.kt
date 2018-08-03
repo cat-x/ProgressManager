@@ -6,6 +6,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader
 import com.bumptech.glide.load.model.GlideUrl
+import me.jessyan.progressmanager.ProgressManager
 import okhttp3.OkHttpClient
 import java.io.InputStream
 import me.jessyan.progressmanager.ProgressListener as IProgressListener
