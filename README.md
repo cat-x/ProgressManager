@@ -15,7 +15,7 @@ allprojects {
 
 //Add the dependency
 dependencies {
-        implementation 'com.github.cat-x:ProgressManager:v1.0'
+        implementation 'com.github.cat-x:ProgressManager:v1.1'
 }
 ```
 
