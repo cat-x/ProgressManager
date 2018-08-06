@@ -5,10 +5,14 @@ buildscript {
     repositories {
         google()
         jcenter()
+        mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.1.3'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.0'
+        classpath 'org.jetbrains.dokka:dokka-android-gradle-plugin:0.9.17'
+        //Or
         classpath 'com.novoda:bintray-release:0.8.1'
     }
 }

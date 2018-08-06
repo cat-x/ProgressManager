@@ -39,4 +39,11 @@ public interface ProgressListener {
      * @param e  错误
      */
     void onError(long id, Exception e);
+
+    /**
+     * 使用UI线程进行回调
+     *
+     * @return 是否使用UI线程进行回调
+     */
+    boolean useUIBack();
 }

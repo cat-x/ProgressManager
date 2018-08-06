@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 import me.jessyan.progressmanager.ProgressListener;
+import me.jessyan.progressmanager.ProgressManager;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okio.Buffer;
@@ -99,15 +100,24 @@ public class ProgressRequestBody extends RequestBody {
         public void write(Buffer source, long byteCount) throws IOException {
             try {
                 super.write(source, byteCount);
-            } catch (IOException e) {
+                if (mProgressInfo.getContentLength() == 0) { //避免重复调用 contentLength()
+                    mProgressInfo.setContentLength(contentLength());
+                }
+            } catch (final IOException e) {
                 e.printStackTrace();
-                for (int i = 0; i < mListeners.length; i++) {
-                    mListeners[i].onError(mProgressInfo.getId(), e);
+                for (final ProgressListener mListener : mListeners) {
+                    if (mListener.useUIBack()) {
+                        ProgressManager.getInstance().runUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mListener.onError(mProgressInfo.getId(), e);
+                            }
+                        });
+                    } else {
+                        mListener.onError(mProgressInfo.getId(), e);
+                    }
                 }
                 throw e;
-            }
-            if (mProgressInfo.getContentLength() == 0) { //避免重复调用 contentLength()
-                mProgressInfo.setContentLength(contentLength());
             }
             totalBytesRead += byteCount;
             tempSize += byteCount;
@@ -121,9 +131,17 @@ public class ProgressRequestBody extends RequestBody {
                     mProgressInfo.setCurrentbytes(finalTotalBytesRead);
                     mProgressInfo.setIntervalTime(finalIntervalTime);
                     mProgressInfo.setFinish(finalTotalBytesRead == mProgressInfo.getContentLength());
-                    for (int i = 0; i < mListeners.length; i++) {
-                        final ProgressListener listener = mListeners[i];
-                        listener.onProgress(mProgressInfo);
+                    for (final ProgressListener listener : mListeners) {
+                        if (listener.useUIBack()) {
+                            ProgressManager.getInstance().runUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    listener.onProgress(mProgressInfo);
+                                }
+                            });
+                        } else {
+                            listener.onProgress(mProgressInfo);
+                        }
                     }
                     lastRefreshTime = curTime;
                     tempSize = 0;

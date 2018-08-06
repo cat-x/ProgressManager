@@ -32,6 +32,8 @@ import java.util.WeakHashMap;
 import me.jessyan.progressmanager.body.ProgressInfo;
 import me.jessyan.progressmanager.body.ProgressRequestBody;
 import me.jessyan.progressmanager.body.ProgressResponseBody;
+import me.jessyan.progressmanager.ex.annotation.RequestListen;
+import me.jessyan.progressmanager.ex.annotation.ResponseListen;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -63,6 +65,7 @@ public final class ProgressManager {
      */
     private final Map<String, List<ProgressListener>> mRequestListeners = new WeakHashMap<>();
     private final Map<String, List<ProgressListener>> mResponseListeners = new WeakHashMap<>();
+    private final WeakHashMap<Object, String> keyHashMap = new WeakHashMap<>();
     private final Handler mHandler; //所有监听器在 Handler 中被执行,所以可以保证所有监听器在主线程中被执行
     private final Interceptor mInterceptor;
     private int mRefreshTime = DEFAULT_REFRESH_TIME; //进度刷新时间(单位ms),避免高频率调用
@@ -72,9 +75,13 @@ public final class ProgressManager {
     private static final String OKHTTP_PACKAGE_NAME = "okhttp3.OkHttpClient";
     private static final boolean DEPENDENCY_OKHTTP;
     private static final int DEFAULT_REFRESH_TIME = 150;
-    private static final String IDENTIFICATION_NUMBER = "?JessYan=";
-    private static final String IDENTIFICATION_HEADER = "JessYan";
+    public static final String IDENTIFICATION_NUMBER = "?Cat_X=";
+    private static final String IDENTIFICATION_HEADER = "Cat_X";
+    public static final String SUFFIX_RETROFIT = "Retrofit-Cat";//Retrofit产生
+    public static final String SUFFIX_RANDOM = "Random-Cat";//随机产生
+    private static final String SUFFIX_LOCATION = "Location-Cat";//重定向产生
     private static final String LOCATION_HEADER = "Location";
+
 
 
     static {
@@ -146,7 +153,32 @@ public final class ProgressManager {
                 mRequestListeners.put(url, progressListeners);
             }
         }
-        progressListeners.add(listener);
+        if (!progressListeners.contains(listener)) {//无需重复添加
+            progressListeners.add(listener);
+        }
+    }
+
+    public void deleteRequestListener(String url) {
+        checkNotNull(url, "url cannot be null");
+        List<ProgressListener> progressListeners;
+        synchronized (ProgressManager.class) {
+            progressListeners = mRequestListeners.get(url);
+            if (progressListeners != null) {
+                progressListeners.clear();
+            }
+        }
+    }
+
+    public void deleteRequestListener(String url, ProgressListener listener) {
+        checkNotNull(url, "url cannot be null");
+        checkNotNull(listener, "listener cannot be null");
+        List<ProgressListener> progressListeners;
+        synchronized (ProgressManager.class) {
+            progressListeners = mRequestListeners.get(url);
+            if (progressListeners != null) {
+                progressListeners.remove(listener);
+            }
+        }
     }
 
     /**
@@ -166,7 +198,32 @@ public final class ProgressManager {
                 mResponseListeners.put(url, progressListeners);
             }
         }
-        progressListeners.add(listener);
+        if (!progressListeners.contains(listener)) {//无需重复添加
+            progressListeners.add(listener);
+        }
+    }
+
+    public void deleteResponseListener(String url) {
+        checkNotNull(url, "url cannot be null");
+        List<ProgressListener> progressListeners;
+        synchronized (ProgressManager.class) {
+            progressListeners = mResponseListeners.get(url);
+            if (progressListeners != null) {
+                progressListeners.clear();
+            }
+        }
+    }
+
+    public void deleteResponseListener(String url, ProgressListener listener) {
+        checkNotNull(url, "url cannot be null");
+        checkNotNull(listener, "listener cannot be null");
+        List<ProgressListener> progressListeners;
+        synchronized (ProgressManager.class) {
+            progressListeners = mResponseListeners.get(url);
+            if (progressListeners != null) {
+                progressListeners.remove(listener);
+            }
+        }
     }
 
 
@@ -209,16 +266,43 @@ public final class ProgressManager {
             return request;
 
         String key = request.url().toString();
+
+        //begin 增加Retrofit处理，key值转换
+        if (request.header(RequestListen.HEADER) != null) {
+            String progressId = request.header(RequestListen.HEADER);
+            List<ProgressListener> listeners = mRequestListeners.get(progressId);
+            if (listeners != null) {
+                key = key + IDENTIFICATION_NUMBER + progressId + SUFFIX_RETROFIT;
+                mRequestListeners.put(key, listeners);
+                mRequestListeners.remove(progressId);
+            }
+        }
+
+        if (request.header(ResponseListen.HEADER) != null) {
+            String progressId = request.header(ResponseListen.HEADER);
+            List<ProgressListener> listeners = mResponseListeners.get(progressId);
+            if (listeners != null) {
+                key = key + IDENTIFICATION_NUMBER + progressId + SUFFIX_RETROFIT;
+                mResponseListeners.put(key, listeners);
+                mResponseListeners.remove(progressId);
+            }
+        }
+        //end 增加Retrofit处理，key值转换
+
         request = pruneIdentification(key, request);
 
-        if (request.body() == null)
-            return request;
-        if (mRequestListeners.containsKey(key)) {
+        if (request.body() != null && mRequestListeners.containsKey(key)) {
             List<ProgressListener> listeners = mRequestListeners.get(key);
+            //如果是Retrofit产生的，则删除，因为都是唯一key，所以要避免无效占用
+            if (key.endsWith(SUFFIX_RETROFIT)) {
+                mRequestListeners.remove(key);
+            }
             return request.newBuilder()
+                    .headers(request.headers().newBuilder().removeAll(RequestListen.HEADER).removeAll(ResponseListen.HEADER).build())
                     .method(request.method(), new ProgressRequestBody(request.body(), listeners, mRefreshTime))
                     .build();
         }
+
         return request;
     }
 
@@ -235,9 +319,11 @@ public final class ProgressManager {
         boolean needPrune = url.contains(IDENTIFICATION_NUMBER);
         if (!needPrune)
             return request;
+        int position = url.indexOf(IDENTIFICATION_NUMBER);
+        keyHashMap.put(request.tag(), url.substring(position));
         return request.newBuilder()
-                .url(url.substring(0, url.indexOf(IDENTIFICATION_NUMBER))) //删除掉标识符
-                .header(IDENTIFICATION_HEADER, url) //将有标识符的 url 加入 header中, 便于wrapResponseBody(Response) 做处理
+                .url(url.substring(0, position)) //删除掉标识符
+//                .header(IDENTIFICATION_HEADER, url.substring(position)) //将有标识符的 url 加入 header中, 便于wrapResponseBody(Response) 做处理
                 .build();
     }
 
@@ -251,10 +337,12 @@ public final class ProgressManager {
     public Response wrapResponseBody(Response response) {
         if (response == null)
             return response;
-
-        String key = response.request().url().toString();
-        if (!TextUtils.isEmpty(response.request().header(IDENTIFICATION_HEADER))) { //从 header 中拿出有标识符的 url
-            key = response.request().header(IDENTIFICATION_HEADER);
+        Request request = response.request();
+        String key = request.url().toString();
+        String catHeader = keyHashMap.get(request.tag())
+                /*request.header(IDENTIFICATION_HEADER)*/;
+        if (!TextUtils.isEmpty(catHeader)) { //从 header 中拿出有标识符的 url
+            key = key + catHeader;
         }
 
         if (response.isRedirect()) {
@@ -268,7 +356,15 @@ public final class ProgressManager {
             return response;
 
         if (mResponseListeners.containsKey(key)) {
+            keyHashMap.remove(request.tag());
             List<ProgressListener> listeners = mResponseListeners.get(key);
+
+            //如果是重定向产生的，则删除,要避免无效占用
+            //如果是Retrofit产生的，则删除，因为都是唯一key，所以要避免无效占用
+            if (key.endsWith(SUFFIX_LOCATION) || key.endsWith(SUFFIX_RETROFIT) || key.endsWith(SUFFIX_RANDOM)) {
+                mResponseListeners.remove(key);
+            }
+
             return response.newBuilder()
                     .body(new ProgressResponseBody(response.body(), listeners, mRefreshTime))
                     .build();
@@ -309,7 +405,7 @@ public final class ProgressManager {
      * @return 加入了时间戳的新的 {@code url}
      */
     public String addDiffResponseListenerOnSameUrl(String originUrl, ProgressListener listener) {
-        return addDiffResponseListenerOnSameUrl(originUrl, String.valueOf(SystemClock.elapsedRealtime() + listener.hashCode()), listener);
+        return addDiffResponseListenerOnSameUrl(originUrl, String.valueOf(SystemClock.elapsedRealtime() + listener.hashCode() + SUFFIX_RANDOM), listener);
     }
 
     /**
@@ -372,7 +468,7 @@ public final class ProgressManager {
      * @return 加入了时间戳的新的 {@code url}
      */
     public String addDiffRequestListenerOnSameUrl(String originUrl, ProgressListener listener) {
-        return addDiffRequestListenerOnSameUrl(originUrl, String.valueOf(SystemClock.elapsedRealtime() + listener.hashCode()), listener);
+        return addDiffRequestListenerOnSameUrl(originUrl, String.valueOf(SystemClock.elapsedRealtime() + listener.hashCode() + SUFFIX_RANDOM), listener);
     }
 
 
@@ -436,7 +532,7 @@ public final class ProgressManager {
             location = response.header(LOCATION_HEADER);// 重定向地址
             if (!TextUtils.isEmpty(location)) {
                 if (url.contains(IDENTIFICATION_NUMBER) && !location.contains(IDENTIFICATION_NUMBER)) { //如果 url 有标识符,那也将标识符加入用于重定向的 location
-                    location += url.substring(url.indexOf(IDENTIFICATION_NUMBER), url.length());
+                    location = location + url.substring(url.indexOf(IDENTIFICATION_NUMBER)) + SUFFIX_LOCATION;
                 }
                 if (!map.containsKey(location)) {
                     map.put(location, progressListeners); //将需要重定向地址的监听器,提供给重定向地址,保证重定向后也可以监听进度
@@ -447,6 +543,11 @@ public final class ProgressManager {
                             locationListener.add(listener);
                         }
                     }
+                }
+                //如果是重定向产生的，则删除,要避免无效占用
+                //如果是Retrofit产生的，则删除，因为都是唯一key，所以要避免无效占用
+                if (url.endsWith(SUFFIX_LOCATION) || url.endsWith(SUFFIX_RETROFIT) || url.endsWith(SUFFIX_RANDOM)) {
+                    map.remove(url);
                 }
             }
         }
@@ -470,4 +571,5 @@ public final class ProgressManager {
         }
         return object;
     }
+
 }

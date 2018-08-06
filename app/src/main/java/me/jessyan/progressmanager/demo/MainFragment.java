@@ -146,6 +146,11 @@ public class MainFragment extends Fragment {
                     }
                 });
             }
+
+            @Override
+            public boolean useUIBack() {
+                return true;
+            }
         };
     }
 
@@ -185,6 +190,11 @@ public class MainFragment extends Fragment {
                     }
                 });
             }
+
+            @Override
+            public boolean useUIBack() {
+                return true;
+            }
         };
     }
 
@@ -208,6 +218,11 @@ public class MainFragment extends Fragment {
                         mGlideProgressText.setText("error");
                     }
                 });
+            }
+
+            @Override
+            public boolean useUIBack() {
+                return true;
             }
         };
     }

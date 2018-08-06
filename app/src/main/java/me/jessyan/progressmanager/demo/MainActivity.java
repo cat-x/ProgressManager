@@ -40,12 +40,15 @@ import java.util.WeakHashMap;
 import me.jessyan.progressmanager.ProgressListener;
 import me.jessyan.progressmanager.ProgressManager;
 import me.jessyan.progressmanager.body.ProgressInfo;
+import me.jessyan.progressmanager.ex.OkHttpExKt;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+
+import static me.jessyan.progressmanager.ex.GlideExKt.initGlideUseListen;
 
 /**
  * ================================================
@@ -98,7 +101,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mOkHttpClient = ((BaseApplication) getApplicationContext()).getOkHttpClient();
+        mOkHttpClient = OkHttpExKt.useListen(new OkHttpClient.Builder()).build();
         mHandler = new Handler();
         initView();
         initListener();
@@ -140,6 +143,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @NonNull
     private ProgressListener getGlideListener() {
         return new ProgressListener() {
+
+
             @Override
             public void onProgress(ProgressInfo progressInfo) {
                 int progress = progressInfo.getPercent();
@@ -161,6 +166,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         mGlideProgressText.setText("error");
                     }
                 });
+            }
+
+            @Override
+            public boolean useUIBack() {
+                return true;
             }
         };
     }
@@ -205,6 +215,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 });
             }
+
+            @Override
+            public boolean useUIBack() {
+                return true;
+            }
         };
     }
 
@@ -247,6 +262,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         mDownloadProgressText.setText("error");
                     }
                 });
+            }
+
+            @Override
+            public boolean useUIBack() {
+                return true;
             }
         };
     }
@@ -343,6 +363,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 即重复加载同一个 Url 时,停止还在请求当中的进度,再开启新的加载
      */
     private void glideStart() {
+        initGlideUseListen(this);
         Glide.with(this)
                 .load(mImageUrl)
                 .apply(RequestOptions.centerCropTransform()

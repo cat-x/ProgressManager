@@ -9,7 +9,10 @@ import java.lang.Exception
  * For cat-x-ProgressManager
  * Cat-x All Rights Reserved
  */
-class ProgressListener : ProgressListener {
+open class ProgressListener : ProgressListener {
+    override fun useUIBack(): Boolean {
+        return true
+    }
 
     override fun onProgress(progressInfo: ProgressInfo?) {
 
