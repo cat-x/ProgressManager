@@ -78,10 +78,19 @@ public class ProgressRequestBody extends RequestBody {
         try {
             mDelegate.writeTo(mBufferedSink);
             mBufferedSink.flush();
-        } catch (IOException e) {
+        } catch (final IOException e) {
             e.printStackTrace();
-            for (int i = 0; i < mListeners.length; i++) {
-                mListeners[i].onError(mProgressInfo.getId(), e);
+            for (final ProgressListener mListener : mListeners) {
+                if (mListener.useUIBack()) {
+                    ProgressManager.getInstance().runUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mListener.onError(mProgressInfo.getId(), e);
+                        }
+                    });
+                } else {
+                    mListener.onError(mProgressInfo.getId(), e);
+                }
             }
             throw e;
         }

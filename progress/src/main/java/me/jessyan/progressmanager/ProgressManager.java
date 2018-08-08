@@ -20,6 +20,7 @@ import android.app.Fragment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
 import java.io.IOException;
@@ -236,7 +237,7 @@ public final class ProgressManager {
      * @param url {@code url} 作为标识符
      * @param e   错误
      */
-    public void notifyOnErorr(String url, Exception e) {
+    public void notifyOnErorr(String url, @NonNull Exception e) {
         checkNotNull(url, "url cannot be null");
         forEachListenersOnError(mRequestListeners, url, e);
         forEachListenersOnError(mResponseListeners, url, e);

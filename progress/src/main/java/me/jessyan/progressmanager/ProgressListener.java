@@ -15,6 +15,8 @@
  */
 package me.jessyan.progressmanager;
 
+import android.support.annotation.NonNull;
+
 import me.jessyan.progressmanager.body.ProgressInfo;
 
 /**
@@ -30,7 +32,7 @@ public interface ProgressListener {
      *
      * @param progressInfo 关于进度的所有信息
      */
-    void onProgress(ProgressInfo progressInfo);
+    void onProgress(@NonNull ProgressInfo progressInfo);
 
     /**
      * 错误监听
@@ -38,7 +40,7 @@ public interface ProgressListener {
      * @param id 进度信息的 id
      * @param e  错误
      */
-    void onError(long id, Exception e);
+    void onError(long id, @NonNull Exception e);
 
     /**
      * 使用UI线程进行回调

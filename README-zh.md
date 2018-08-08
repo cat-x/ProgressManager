@@ -15,7 +15,7 @@ allprojects {
 
 //添加这个依赖
 dependencies {
-        implementation 'com.github.cat-x:ProgressManager:v1.1'
+        implementation 'com.github.cat-x:ProgressManager:v1.2'
 }
 ```
 

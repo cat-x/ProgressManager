@@ -14,11 +14,11 @@ open class ProgressListener : ProgressListener {
         return true
     }
 
-    override fun onProgress(progressInfo: ProgressInfo?) {
+    override fun onProgress(progressInfo: ProgressInfo) {
 
     }
 
-    override fun onError(id: Long, e: Exception?) {
+    override fun onError(id: Long, e: Exception) {
 
     }
 }
